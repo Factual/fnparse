@@ -1,11 +1,11 @@
 (ns name.choi.joshua.fnparse.json
-  (:use name.choi.joshua.fnparse clojure.contrib.error-kit))
+  (:use name.choi.joshua.fnparse))
 
 ;; These are some functions that the rules will use. A lot of these are
 ;; optional.
 
 ; A JSON node, which what the parsing will return in the end.
-(defstruct node-s :kind :content) 
+(defstruct node-s :kind :content)
 
 ; The parsing state data structure. The remaining tokens are stored
 ; in :remainder, and the current column and line are stored in their
@@ -41,21 +41,22 @@
                       ; rule.
 
 (defn- b-char [subrule]
-  (invisi-conc subrule (update-info :line inc)))
+  (invisi-conc subrule (update-info :line inc)
+                       (set-info :column  0)))
 
 ;; A couple of parse errors have been put here and there. It's nowhere
 ;; near complete, but rather it's to show examples of how to implement
 ;; errors.
 
-(deferror parse-error [] [state message message-args]
-  {:msg (str (format "JSON error at line %s, column %s: "
-               (:line state) (:column state))
-             (apply format message message-args))
-   :unhandled (throw-msg Exception)})
+(defn throw-parse-error [state message message-args]
+  (throw (IllegalArgumentException. (str (format "JSON error at line %s, column %s: "
+                                           (:line state) (:column state))
+                                         (apply format message message-args)))))
+
 
 (defn- expectation-error-fn [expectation]
   (fn [remainder state]
-    (raise parse-error state "%s expected where \"%s\" is"
+    (throw-parse-error state "%s expected where \"%s\" is"
       [expectation (or (first remainder) "the end of the file")])))
 
 ;; And here are where this parser's rules are defined.
@@ -88,7 +89,7 @@
 
 (def return-lit (lit \return))
 
-(def line-break (b-char (rep+ (alt newline-lit return-lit))))
+(def line-break (b-char  (alt newline-lit return-lit)))
 
 (def json-char (alt line-break (nb-char anything)))
 
@@ -229,20 +230,20 @@
   (binding [*remainder-accessor* remainder-a] ; this is completely
                                               ; optional
     (rule-match text
-      #(raise parse-error % "invalid document \"%s\""
+      #(throw-parse-error % "invalid document \"%s\""
          (apply-str (remainder-a %)))
-      #(raise parse-error %2 "leftover data after a valid node \"%s\""
+      #(throw-parse-error %2 "leftover data after a valid node \"%s\""
          (apply-str (remainder-a %2)))
       (struct state-s tokens 0 0))))
 ; The call to rule-match above is equivalent to the stuff below:
 ;    (let [[product state :as result]
 ;          (text (struct state-s tokens 0 0))]
 ;      (if (nil? result)
-;        (raise parse-error "invalid document \"%s\""
+;        (throw-parse-error "invalid document \"%s\""
 ;          (apply-str tokens))
 ;        (if-let [remainder (seq (remainder-a state))]
 ;          product
-;          (raise parse-error "leftover data after a valid node \"%s\""
+;          (throw-parse-error "leftover data after a valid node \"%s\""
 ;            (apply-str remainder)))))
 
 ;; The functions below just convert JSON nodes into Clojure strings,
