@@ -3,5 +3,7 @@
   :aot [name.choi.joshua.fnparse]
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.clojure/algo.monads "0.1.0"]]
-  :dev-dependencies [[lein-clojars "0.5.0"]])
-
+  :dev-dependencies [[lein-clojars "0.5.0"]]
+  :repositories {"releases" {:url "http://maven.corp.factual.com/nexus/content/repositories/releases"}
+                 "snapshots" {:url "http://maven.corp.factual.com/nexus/content/repositories/snapshots"}
+                 "public" {:url "http://maven.corp.factual.com/nexus/content/groups/public/"}})
